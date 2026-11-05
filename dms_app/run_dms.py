@@ -66,11 +66,19 @@ def launch_desktop_gui(url):
             os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe")
         ]
 
+        # Directory profilo utente isolata per memorizzare cache, favicon e icona della taskbar di Windows
+        app_data_dir = os.path.join(get_exe_dir(), "dms_profile_data")
+
         # Tentativo con Edge (preinstallato su ogni Windows 10/11)
         for ep in edge_paths:
             if os.path.exists(ep):
                 try:
-                    subprocess.Popen([ep, f"--app={url}", "--window-size=1400,900"])
+                    subprocess.Popen([
+                        ep,
+                        f"--app={url}",
+                        f"--user-data-dir={app_data_dir}",
+                        "--window-size=1400,900"
+                    ])
                     return
                 except Exception:
                     pass
@@ -79,7 +87,12 @@ def launch_desktop_gui(url):
         for cp in chrome_paths:
             if os.path.exists(cp):
                 try:
-                    subprocess.Popen([cp, f"--app={url}", "--window-size=1400,900"])
+                    subprocess.Popen([
+                        cp,
+                        f"--app={url}",
+                        f"--user-data-dir={app_data_dir}",
+                        "--window-size=1400,900"
+                    ])
                     return
                 except Exception:
                     pass

@@ -76,11 +76,12 @@ body {
     gap: 12px;
 }
 .app-logo-img {
-    height: 34px;
+    height: 38px;
     width: auto;
     object-fit: contain;
     border-radius: var(--radius-sm);
     display: block;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
 .topbar-right {
