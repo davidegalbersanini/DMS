@@ -71,22 +71,16 @@ body {
 }
 
 .app-title {
-    font-weight: 700;
-    font-size: 14px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    letter-spacing: -0.2px;
+    gap: 12px;
 }
-.app-title-badge {
-    background: #312e81;
-    color: #c7d2fe;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 7px;
+.app-logo-img {
+    height: 34px;
+    width: auto;
+    object-fit: contain;
     border-radius: var(--radius-sm);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    display: block;
 }
 
 .topbar-right {
