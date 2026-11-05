@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.spec
+build/
+dist/
+
+# Database e dati locali / allegati
+dms_shared_data/
+dms_app/dms_shared_data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Documenti temporanei o di layout locale
+~$*.docx
+
+# OS / Editor
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store

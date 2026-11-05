@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMS - Developments Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- TOPBAR ELEGANTE SLATE -->
+    <header class="app-topbar">
+        <div class="app-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #818cf8;">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <span>DMS</span>
+            <span class="app-title-badge">Developments Management System</span>
+        </div>
+        <div class="topbar-right">
+            <div class="folder-indicator" id="topbar-folder-display" title="Cartella Dati Condivisa">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <span>Cartella Dati: Inizializzazione...</span>
+            </div>
+            <button class="btn-topbar" onclick="openConfigModal()" title="Configura o sposta la cartella di rete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Cartella di Rete
+            </button>
+            <button class="btn-topbar" onclick="openLookupsModal()" title="Gestione anagrafiche persone, ruoli e liste">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                Gestione Liste
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTROL HUB MODERNO (VIEW SETUP & FILTRI) -->
+    <section class="control-hub">
+        
+        <!-- RIGA 1: VIEW SETUP TOGGLES -->
+        <div class="view-setup-bar">
+            <div class="setup-cluster">
+                <span class="setup-cluster-label">Tipi Attività:</span>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="vs-type-project" checked onchange="reloadTable()">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>Project</span>
+                </label>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="vs-type-task" checked onchange="reloadTable()">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>Task</span>
+                </label>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="vs-type-idea" checked onchange="reloadTable()">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>Idea</span>
+                </label>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="vs-type-discussion" checked onchange="reloadTable()">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>Discussion</span>
+                </label>
+            </div>
+
+            <div style="width: 1px; height: 18px; background: #cbd5e1;"></div>
+
+            <div class="setup-cluster">
+                <span class="setup-cluster-label">Nascondi Stati Standard:</span>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="vs-hide-closed" checked onchange="reloadTable()">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>Closed</span>
+                </label>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="vs-hide-cancelled" checked onchange="reloadTable()">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>Cancelled</span>
+                </label>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="vs-hide-onhold" checked onchange="reloadTable()">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>On Hold</span>
+                </label>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="vs-hide-rejected" checked onchange="reloadTable()">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>Rejected</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- RIGA 2: BOTTONI AZIONE & FILTRI AVANZATI -->
+        <div class="actions-filter-bar">
+            
+            <div class="action-buttons-wrap">
+                <button class="btn-modern btn-modern-primary" onclick="handleNewId()" title="Crea un nuovo ID nel database">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Nuovo ID
+                </button>
+                <button class="btn-modern" id="btn-expiring" onclick="toggleExpiringFilter()" title="Mostra solo le attività con azioni che scadono nei prossimi 5 giorni">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Azioni in scadenza (5gg)
+                </button>
+                <button class="btn-modern" onclick="exportExcel()" title="Esporta le attività in foglio Excel">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Esporta Dati
+                </button>
+                <button class="btn-modern" onclick="printReport()" title="Genera report PDF A4 Landscape">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print Report
+                </button>
+                <div style="display: flex; align-items: center; gap: 4px; margin-left: 4px;">
+                    <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Ordina:</span>
+                    <select class="select-modern" id="sort-select" onchange="reloadTable()">
+                        <option value="id_desc">ID (Decrescente)</option>
+                        <option value="urgency">Urgenza</option>
+                        <option value="relevancy">Rilevanza</option>
+                        <option value="first_year">Primo Anno Attivo</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- FILTRI A TENDINA & RICERCA -->
+            <div class="filter-dropdowns-wrap">
+                <select class="select-modern" id="filter-year" onchange="reloadTable()">
+                    <option value="">Anno (Tutti)</option>
+                    <option value="2027">2027</option>
+                    <option value="2028">2028</option>
+                    <option value="2029">2029</option>
+                    <option value="2030">2030</option>
+                    <option value="2031">2031</option>
+                </select>
+
+                <select class="select-modern" id="filter-urgency" onchange="reloadTable()">
+                    <option value="">Urgenza (Tutte)</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="LOW">LOW</option>
+                    <option value="MINOR">MINOR</option>
+                </select>
+
+                <select class="select-modern" id="filter-beneficiary" onchange="reloadTable()">
+                    <option value="">Beneficiary (Tutti)</option>
+                </select>
+
+                <select class="select-modern" id="filter-cluster" onchange="reloadTable()">
+                    <option value="">Cluster (Tutti)</option>
+                </select>
+
+                <select class="select-modern" id="filter-pm" onchange="reloadTable()">
+                    <option value="">PM (Tutti)</option>
+                </select>
+
+                <select class="select-modern" id="filter-proto" onchange="reloadTable()">
+                    <option value="">Proto (Tutti)</option>
+                </select>
+
+                <div class="search-container">
+                    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="global-search" class="input-search-modern" placeholder="Cerca ovunque..." oninput="debounceReload()">
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- DATA TABLE CON COLONNE RIDIMENSIONABILI -->
+    <main class="table-viewport" id="table-scroll-container">
+        <table class="modern-table" id="main-dms-table">
+            <thead>
+                <tr>
+                    <th data-col="actions" style="width: 140px; text-align: center;">Comandi<div class="resizer"></div></th>
+                    <th data-col="id" style="width: 75px;">ID<div class="resizer"></div></th>
+                    <th data-col="urgency" style="width: 95px;">Urgenza<div class="resizer"></div></th>
+                    <th data-col="drivers" style="width: 160px;">Drivers<div class="resizer"></div></th>
+                    <th data-col="odg" style="width: 50px; text-align: center;">ODG<div class="resizer"></div></th>
+                    <th data-col="title" style="width: 280px;">Titolo Attività<div class="resizer"></div></th>
+                    <th data-col="type" style="width: 100px;">Tipo<div class="resizer"></div></th>
+                    <th data-col="relevancy" style="width: 55px; text-align: center;">Rel (1-5)<div class="resizer"></div></th>
+                    <th data-col="pm" style="width: 120px;">PM<div class="resizer"></div></th>
+                    <th data-col="pe" style="width: 120px;">PE<div class="resizer"></div></th>
+                    <th data-col="beneficiary" style="width: 100px;">Beneficiary<div class="resizer"></div></th>
+                    <th data-col="cluster" style="width: 110px;">Cluster<div class="resizer"></div></th>
+                    <th data-col="basic_kit" style="width: 80px;">Basic/Kit<div class="resizer"></div></th>
+                    <th data-col="proto_n" style="width: 70px;">Proto<div class="resizer"></div></th>
+                    <th data-col="year_2027" style="width: 85px;">2027 (Mesi)<div class="resizer"></div></th>
+                    <th data-col="year_28" style="width: 35px; text-align: center;">28<div class="resizer"></div></th>
+                    <th data-col="year_29" style="width: 35px; text-align: center;">29<div class="resizer"></div></th>
+                    <th data-col="year_30" style="width: 35px; text-align: center;">30<div class="resizer"></div></th>
+                    <th data-col="year_31" style="width: 35px; text-align: center;">31<div class="resizer"></div></th>
+                    <th data-col="status" style="width: 140px;">Stato<div class="resizer"></div></th>
+                    <th data-col="last_update" style="width: 90px;">Last Update<div class="resizer"></div></th>
+                </tr>
+            </thead>
+            <tbody id="activities-table-body">
+                <!-- Generato dinamicamente -->
+            </tbody>
+        </table>
+    </main>
+
+    <!-- MODAL DETTAGLIO SINGOLO ID -->
+    <div id="modal-id-container" class="modal-overlay" style="display: none;">
+        <div class="modal-box modal-id-large">
+            
+            <!-- HEADER ID SECTION -->
+            <div class="modal-header-section">
+                <div class="modal-top-nav">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="btn-modern" id="btn-prev-id" onclick="navigateId(-1)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            Precedente
+                        </button>
+                        <span id="nav-counter-display" style="font-weight: 600; font-size: 12px; color: var(--text-secondary);"></span>
+                        <button class="btn-modern" id="btn-next-id" onclick="navigateId(1)">
+                            Successivo
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 11px; color: var(--text-muted);" id="modal-last-update-display"></span>
+                        <button class="btn-modern" onclick="closeIdModal()" style="padding: 4px 8px;">&#10005;</button>
+                    </div>
+                </div>
+
+                <!-- TITOLO E FLAG ODG / SAFETY -->
+                <div class="id-main-row">
+                    <span class="id-big-badge" id="modal-badge-id">ID 00000</span>
+                    <input type="text" class="id-title-input-large" id="modal-input-title" placeholder="Titolo dell'attività...">
+                    
+                    <label class="toggle-wrapper" style="background: #f1f5f9; padding: 6px 10px; border-radius: var(--radius-md);">
+                        <input type="checkbox" id="modal-check-odg">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span>OdG (Riunione)</span>
+                    </label>
+                    <label class="toggle-wrapper" style="background: var(--danger-light); padding: 6px 10px; border-radius: var(--radius-md); color: var(--danger-text);">
+                        <input type="checkbox" id="modal-check-safety">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span>Safety</span>
+                    </label>
+                </div>
+
+                <!-- GRIGLIA PARAMETRI PRINCIPALI -->
+                <div class="params-grid-modern">
+                    <div class="param-field">
+                        <span class="param-label">Tipo</span>
+                        <select class="select-modern" id="modal-select-type" onchange="onTypeChangeModal()">
+                            <option value="Project">Project</option>
+                            <option value="Task">Task</option>
+                            <option value="Idea">Idea</option>
+                            <option value="Discussion">Discussion</option>
+                        </select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">Stato</span>
+                        <select class="select-modern" id="modal-select-status"></select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">Urgenza</span>
+                        <select class="select-modern" id="modal-select-urgency">
+                            <option value="CRITICAL">CRITICAL</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="LOW">LOW</option>
+                            <option value="MINOR">MINOR</option>
+                        </select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">Rilevanza (1-5)</span>
+                        <select class="select-modern" id="modal-select-relevancy">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">PM</span>
+                        <select class="select-modern" id="modal-select-pm"></select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">PE</span>
+                        <select class="select-modern" id="modal-select-pe"></select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">Beneficiary</span>
+                        <select class="select-modern" id="modal-select-beneficiary"></select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">Cluster</span>
+                        <select class="select-modern" id="modal-select-cluster"></select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">Basic / Kit</span>
+                        <select class="select-modern" id="modal-select-basic-kit">
+                            <option value="Basic">Basic</option>
+                            <option value="Kit">Kit</option>
+                        </select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">Proto n.</span>
+                        <select class="select-modern" id="modal-select-proto"></select>
+                    </div>
+                    <div class="param-field">
+                        <span class="param-label">Supplier</span>
+                        <input type="text" class="cell-input" style="border: 1px solid var(--border);" id="modal-input-supplier">
+                    </div>
+                </div>
+
+                <!-- ANNI E MULTI-CHECK (DRIVERS, STREAMS, PLATFORMS) -->
+                <div style="display: grid; grid-template-columns: 260px 1fr 1fr 1fr; gap: 10px; margin-top: 6px;">
+                    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 6px 10px;">
+                        <span class="param-label">Anni Attività</span>
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                            <input type="text" class="cell-input" id="modal-input-year27" placeholder="2027 (Mesi...)" style="width: 100px; border: 1px solid var(--border); background: #fff;">
+                            <label class="toggle-wrapper"><input type="checkbox" id="modal-check-year28"> 28</label>
+                            <label class="toggle-wrapper"><input type="checkbox" id="modal-check-year29"> 29</label>
+                            <label class="toggle-wrapper"><input type="checkbox" id="modal-check-year30"> 30</label>
+                            <label class="toggle-wrapper"><input type="checkbox" id="modal-check-year31"> 31</label>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 6px 10px;">
+                        <span class="param-label">Drivers</span>
+                        <div id="modal-container-drivers" style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 50px; overflow-y: auto; margin-top: 4px;"></div>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 6px 10px;">
+                        <span class="param-label">Streams</span>
+                        <div id="modal-container-streams" style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 50px; overflow-y: auto; margin-top: 4px;"></div>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 6px 10px;">
+                        <span class="param-label">Platforms</span>
+                        <div id="modal-container-platforms" style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 50px; overflow-y: auto; margin-top: 4px;"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TAB PILLS -->
+            <div class="modal-tabs-header">
+                <button class="tab-pill active" onclick="switchModalTab('execution')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    1. Execution
+                </button>
+                <button class="tab-pill" onclick="switchModalTab('masterdata')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    2. Master Data
+                </button>
+                <button class="tab-pill" onclick="switchModalTab('actionlog')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    3. Action Log
+                </button>
+                <button class="tab-pill" onclick="switchModalTab('afc')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    4. AFC (Financials)
+                </button>
+            </div>
+
+            <!-- CORPO DEI TAB -->
+            <div class="modal-body-area">
+                
+                <!-- TAB 1: EXECUTION -->
+                <div class="tab-pane active" id="tab-execution">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        
+                        <div class="rich-card">
+                            <div class="rich-card-header"><span>NOTES & ACTIONS</span></div>
+                            <div class="rich-toolbar">
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('notes_actions', 'bold')"><strong>B</strong></button>
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('notes_actions', 'italic')"><em>I</em></button>
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('notes_actions', 'underline')"><u>U</u></button>
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('notes_actions', 'insertUnorderedList')">&#8226; Elenco</button>
+                                <label style="font-size: 11px; display: inline-flex; align-items: center; gap: 3px; color: var(--text-secondary);">
+                                    Colore: <input type="color" onchange="execCmdColor('notes_actions', 'foreColor', this.value)" style="border:none; width:20px; height:20px; cursor:pointer;">
+                                </label>
+                                <label style="font-size: 11px; display: inline-flex; align-items: center; gap: 3px; color: var(--text-secondary);">
+                                    Evidenzia: <input type="color" value="#ffff00" onchange="execCmdColor('notes_actions', 'hiliteColor', this.value)" style="border:none; width:20px; height:20px; cursor:pointer;">
+                                </label>
+                            </div>
+                            <div class="rich-area" id="editor-notes_actions" contenteditable="true"></div>
+                        </div>
+
+                        <div class="rich-card">
+                            <div class="rich-card-header"><span>Plan & Deliverables (*)</span></div>
+                            <div class="rich-toolbar">
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('plan_deliverables', 'bold')"><strong>B</strong></button>
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('plan_deliverables', 'italic')"><em>I</em></button>
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('plan_deliverables', 'underline')"><u>U</u></button>
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('plan_deliverables', 'insertUnorderedList')">&#8226; Elenco</button>
+                                <label style="font-size: 11px; display: inline-flex; align-items: center; gap: 3px; color: var(--text-secondary);">
+                                    Colore: <input type="color" onchange="execCmdColor('plan_deliverables', 'foreColor', this.value)" style="border:none; width:20px; height:20px; cursor:pointer;">
+                                </label>
+                                <label style="font-size: 11px; display: inline-flex; align-items: center; gap: 3px; color: var(--text-secondary);">
+                                    Evidenzia: <input type="color" value="#ffff00" onchange="execCmdColor('plan_deliverables', 'hiliteColor', this.value)" style="border:none; width:20px; height:20px; cursor:pointer;">
+                                </label>
+                            </div>
+                            <div class="rich-area" id="editor-plan_deliverables" contenteditable="true"></div>
+                        </div>
+
+                    </div>
+
+                    <!-- TABELLA TEAM -->
+                    <div style="margin-top: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 700; font-size: 12px; color: var(--text-secondary);">TEAM (Funzione & Nome)</span>
+                            <button class="btn-modern" onclick="addTeamRow()">+ Aggiungi Membro Team</button>
+                        </div>
+                        <table class="modern-table" id="team-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45%;">Funzione</th>
+                                    <th style="width: 45%;">Nome e Cognome</th>
+                                    <th style="width: 10%; text-align: center;">Rimuovi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="team-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 2: MASTER DATA -->
+                <div class="tab-pane" id="tab-masterdata" style="display: none;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                        <div class="param-field"><span class="param-label">Clarity</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-clarity"></div>
+                        <div class="param-field"><span class="param-label">ISPI</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-ispi"></div>
+                        <div class="param-field"><span class="param-label">Other ID</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-other_id"></div>
+                        <div class="param-field"><span class="param-label">BCR</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-bcr"></div>
+                        <div class="param-field"><span class="param-label">CR</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-cr"></div>
+                        <div class="param-field"><span class="param-label">QSD</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-qsd"></div>
+                        <div class="param-field"><span class="param-label">NDC</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-ndc"></div>
+                        <div class="param-field"><span class="param-label">WBS Code</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-wbs_code"></div>
+                        <div class="param-field" style="grid-column: span 4;"><span class="param-label">WBS Description</span><input type="text" class="cell-input" style="border:1px solid var(--border);" id="modal-input-wbs_description"></div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+                        <div class="rich-card">
+                            <div class="rich-card-header"><span>Booking n. (Rich Text)</span></div>
+                            <div class="rich-toolbar">
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('booking_n', 'bold')"><strong>B</strong></button>
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('booking_n', 'italic')"><em>I</em></button>
+                            </div>
+                            <div class="rich-area" id="editor-booking_n" contenteditable="true" style="min-height: 80px;"></div>
+                        </div>
+
+                        <div class="rich-card">
+                            <div class="rich-card-header"><span>RDA Record (Rich Text)</span></div>
+                            <div class="rich-toolbar">
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('rda_record', 'bold')"><strong>B</strong></button>
+                                <button type="button" class="btn-modern" style="padding: 2px 7px;" onclick="execCmd('rda_record', 'italic')"><em>I</em></button>
+                            </div>
+                            <div class="rich-area" id="editor-rda_record" contenteditable="true" style="min-height: 80px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: ACTION LOG -->
+                <div class="tab-pane" id="tab-actionlog" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 700; color: var(--text-secondary); font-size: 12px;">ACTION ITEMS & SCADENZE</span>
+                        <button class="btn-modern btn-modern-primary" onclick="addActionRow()">+ Nuova Azione</button>
+                    </div>
+                    <table class="modern-table" id="actions-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th style="width: 45%;">Azione / Descrizione</th>
+                                <th style="width: 20%;">Owner</th>
+                                <th style="width: 15%;">Stato</th>
+                                <th style="width: 15%;">Target Date</th>
+                                <th style="width: 5%; text-align: center;">Rimuovi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="actions-table-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 4: AFC -->
+                <div class="tab-pane" id="tab-afc" style="display: none;">
+                    <div style="display: flex; gap: 16px; margin-bottom: 14px;">
+                        <div class="param-field" style="width: 200px;">
+                            <span class="param-label">AFC 1</span>
+                            <select class="select-modern" id="modal-select-afc1">
+                                <option value="">-- Seleziona --</option>
+                                <option value="BDG">BDG</option>
+                                <option value="EXTRA BDG">EXTRA BDG</option>
+                                <option value="B.LOG">B.LOG</option>
+                            </select>
+                        </div>
+                        <div class="param-field" style="width: 200px;">
+                            <span class="param-label">AFC 2</span>
+                            <select class="select-modern" id="modal-select-afc2">
+                                <option value="">-- Seleziona --</option>
+                                <option value="PI">PI</option>
+                                <option value="PV">PV</option>
+                                <option value="CP">CP</option>
+                                <option value="PR">PR</option>
+                                <option value="CFr">CFr</option>
+                                <option value="CFf">CFf</option>
+                                <option value="TBD">TBD</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <span class="param-label">Matrice Ore / Costi</span>
+                    <table class="modern-table" style="width: 100%; margin-top: 6px;">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="width: 160px; vertical-align: middle;">CATEGORIA COSTO</th>
+                                <th rowspan="2" style="width: 140px; vertical-align: middle; text-align: right;">FULL LIFE</th>
+                                <th colspan="4" style="text-align: center;">2027</th>
+                            </tr>
+                            <tr>
+                                <th style="text-align: right;">BDG</th>
+                                <th style="text-align: right;">ACTUAL</th>
+                                <th style="text-align: right;">REMAINING</th>
+                                <th style="text-align: right;">FORECAST</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>ENG HRS</strong></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-ENG HRS-full_life"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-ENG HRS-curr_bdg"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-ENG HRS-curr_actual"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-ENG HRS-curr_remaining"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-ENG HRS-curr_forecast"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>OTHER HRS</strong></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-OTHER HRS-full_life"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-OTHER HRS-curr_bdg"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-OTHER HRS-curr_actual"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-OTHER HRS-curr_remaining"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-OTHER HRS-curr_forecast"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>NRC VENDOR</strong></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-NRC VENDOR-full_life"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-NRC VENDOR-curr_bdg"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-NRC VENDOR-curr_actual"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-NRC VENDOR-curr_remaining"></td>
+                                <td><input type="text" class="cell-input" style="text-align: right;" id="afc-NRC VENDOR-curr_forecast"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- FOOTER BAR -->
+            <div class="modal-footer-bar">
+                <button class="btn-modern" onclick="openCurrentFolder()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    Apri Cartella File Attività
+                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-modern" onclick="closeIdModal()">Chiudi</button>
+                    <button class="btn-modern btn-modern-primary" onclick="saveCurrentActivity()">Salva Modifiche</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL GESTIONE LISTE -->
+    <div id="modal-lookups-container" class="modal-overlay" style="display: none;">
+        <div class="modal-box" style="width: 720px;">
+            <div style="background: #0f172a; color: white; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <strong style="font-size: 13.5px;">Gestione Liste & Anagrafiche</strong>
+                <button class="btn-modern" onclick="closeLookupsModal()" style="padding: 2px 7px;">&#10005;</button>
+            </div>
+            <div style="padding: 10px 18px; background: #f8fafc; border-bottom: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="btn-modern" onclick="selectLookupCategory('person')">Persone (PM/PE/Team)</button>
+                <button class="btn-modern" onclick="selectLookupCategory('function')">Ruoli Team</button>
+                <button class="btn-modern" onclick="selectLookupCategory('driver')">Drivers</button>
+                <button class="btn-modern" onclick="selectLookupCategory('stream')">Streams</button>
+                <button class="btn-modern" onclick="selectLookupCategory('platform')">Platforms</button>
+                <button class="btn-modern" onclick="selectLookupCategory('beneficiary')">Beneficiari</button>
+                <button class="btn-modern" onclick="selectLookupCategory('cluster')">Clusters</button>
+                <button class="btn-modern" onclick="selectLookupCategory('proto')">Prototipi</button>
+            </div>
+            <div style="padding: 18px; flex: 1; overflow-y: auto; max-height: 400px;">
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <input type="text" id="new-lookup-name" class="cell-input" style="border: 1px solid var(--border); flex: 1;" placeholder="Nome nuova voce...">
+                    <button class="btn-modern btn-modern-primary" onclick="handleAddLookup()">+ Aggiungi</button>
+                </div>
+                <table class="modern-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Nome Voce</th>
+                            <th style="width: 90px; text-align: center;">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lookups-table-body"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer-bar">
+                <div></div>
+                <button class="btn-modern" onclick="closeLookupsModal()">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIG CARTELLA RETE -->
+    <div id="modal-config-container" class="modal-overlay" style="display: none;">
+        <div class="modal-box" style="width: 580px;">
+            <div style="background: #0f172a; color: white; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <strong style="font-size: 13.5px;">Cartella Dati Condivisa (Rete / Disco)</strong>
+                <button class="btn-modern" onclick="closeConfigModal()" style="padding: 2px 7px;">&#10005;</button>
+            </div>
+            <div style="padding: 18px;">
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5;">
+                    Seleziona la cartella condivisa di rete (es. <code>\\server\condivisa\DMS\</code> o un disco di rete <code>Z:\DMS\</code>). Tutti i colleghi con l'eseguibile punteranno a questa cartella per condividere lo stesso database e gli stessi file.
+                </p>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <input type="text" id="config-folder-input" class="cell-input" style="border: 1px solid var(--border); flex: 1;" placeholder="C:\DMS_Data oppure \\server\share\DMS">
+                    <button class="btn-modern" onclick="browseFolderDialog()">Sfoglia...</button>
+                </div>
+                <div id="config-status-msg" style="font-size: 11px; color: var(--success);"></div>
+            </div>
+            <div class="modal-footer-bar">
+                <button class="btn-modern" onclick="closeConfigModal()">Annulla</button>
+                <button class="btn-modern btn-modern-primary" onclick="saveSharedConfig()">Conferma e Collega</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
