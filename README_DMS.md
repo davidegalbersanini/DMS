@@ -4,6 +4,13 @@ Sistema di gestione progetti, task, idee e discussioni di sviluppo ingegneristic
 
 ---
 
+## ⬇️ Download Diretto (Ultima Versione)
+
+Puoi scaricare direttamente l'eseguibile aggiornato all'ultimo commit da questo link diretto:
+👉 **[Scarica DMS.exe (Ultima Versione)](https://raw.githubusercontent.com/davidegalbersanini/DMS/main/DMS.exe)**
+
+---
+
 ## 🚀 Come Avviare l'Applicazione su Qualsiasi PC (Zero Installazione)
 
 Hai a disposizione l'eseguibile unico autonomo:
