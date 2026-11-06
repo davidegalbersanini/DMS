@@ -163,6 +163,15 @@ def init_db():
     );
     """)
 
+    # Indici mirati per velocizzare le query su volumi consistenti e concorrenza di rete
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_act_type_status ON activities(type, status);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_act_urgency ON activities(urgency);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_act_pm ON activities(pm);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_act_beneficiary ON activities(beneficiary);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_act_cluster ON activities(cluster);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_actions_act_status ON actions(activity_id, status);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_act_tags_search ON activity_tags(activity_id, category);")
+
     conn.commit()
 
     # Seed iniziale dei lookups se vuoti

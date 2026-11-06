@@ -1,3 +1,91 @@
+// SISTEMA TOAST NOTIFICATIONS ELEGANTE (Sostituisce alert bloccanti)
+function showToast(message, type = 'info', duration = 3000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    let iconSvg = '';
+    if (type === 'success') {
+        iconSvg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    } else if (type === 'error') {
+        iconSvg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+    } else {
+        iconSvg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+    }
+    
+    toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'toastFadeOut 0.25s forwards';
+        setTimeout(() => toast.remove(), 250);
+    }, duration);
+}
+
+// SCORCIATOIE DA TASTIERA GLOBALI
+document.addEventListener('keydown', (e) => {
+    // Esc: Chiude qualsiasi modale aperto
+    if (e.key === 'Escape') {
+        if (typeof closeAllMultiSelects === 'function' && closeAllMultiSelects()) {
+            return;
+        }
+        const colModal = document.getElementById('modal-columns-container');
+        if (colModal && colModal.style.display !== 'none') {
+            closeColumnsModal();
+            return;
+        }
+        const idModal = document.getElementById('modal-id-container');
+        if (idModal && idModal.style.display !== 'none') {
+            closeIdModal();
+            return;
+        }
+        const cfgModal = document.getElementById('modal-config-container');
+        if (cfgModal && cfgModal.style.display !== 'none') {
+            closeConfigModal();
+            return;
+        }
+        const lookupsModal = document.getElementById('modal-lookups-container');
+        if (lookupsModal && lookupsModal.style.display !== 'none') {
+            closeLookupsModal();
+            return;
+        }
+    }
+
+    // Ctrl + F: Porta il focus alla ricerca globale
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        const searchInput = document.getElementById('global-search');
+        if (searchInput && document.activeElement !== searchInput) {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+
+    // Frecce Sx/Dx nel modale ID se non si sta digitando in un campo input/textarea
+    const idModal = document.getElementById('modal-id-container');
+    if (idModal && idModal.style.display !== 'none') {
+        const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        const isEditable = document.activeElement && document.activeElement.isContentEditable;
+        if (tag !== 'input' && tag !== 'textarea' && tag !== 'select' && !isEditable) {
+            if (e.key === 'ArrowLeft') {
+                navigateId(-1);
+            } else if (e.key === 'ArrowRight') {
+                navigateId(1);
+            }
+        }
+    }
+});
+
+// Chiusura dropdown filtri cliccando all'esterno
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.multiselect-dropdown')) {
+        if (typeof closeAllMultiSelects === 'function') {
+            closeAllMultiSelects();
+        }
+    }
+});
+
 // DMS 2.0 - Client Controller & Modern Data Grid with Resizable Columns
 
 let allActivities = [];
@@ -6,6 +94,8 @@ let currentLookups = {};
 let isExpiringFilterActive = false;
 let searchDebounceTimer = null;
 let currentLookupCategory = 'person';
+let currentSortCol = "id";
+let currentSortDir = "desc";
 
 const TYPE_STATUS_MAP = {
     "Discussion": [
@@ -44,17 +134,284 @@ const TYPE_STATUS_MAP = {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
+    restoreColumnOrder();
     restoreColumnWidths();
+    applyColumnVisibility();
     initColumnResize();
+    initColumnReorder();
+    initMultiFilters();
+    updateSortIndicators();
     await loadConfig();
     await loadLookups();
     await reloadTable();
 });
 
-// --- SISTEMA RIDIMENSIONAMENTO COLONNE (DRAG & DROP) ---
+// --- SISTEMA RIORDINO & RIDIMENSIONAMENTO COLONNE (DRAG & DROP) ---
+
+const DEFAULT_COLUMN_ORDER = [
+    "actions", "id", "urgency", "drivers", "odg", "title", "type",
+    "relevancy", "pm", "pe", "beneficiary", "cluster", "basic_kit",
+    "proto_n", "year_2027", "year_28", "year_29", "year_30", "year_31",
+    "status", "last_update"
+];
+
+const DEFAULT_COLUMN_WIDTHS = {
+    actions: "140px",
+    id: "75px",
+    urgency: "110px",
+    drivers: "160px",
+    odg: "80px",
+    title: "280px",
+    type: "100px",
+    relevancy: "140px",
+    pm: "120px",
+    pe: "120px",
+    beneficiary: "125px",
+    cluster: "120px",
+    basic_kit: "100px",
+    proto_n: "90px",
+    year_2027: "145px",
+    year_28: "70px",
+    year_29: "70px",
+    year_30: "70px",
+    year_31: "70px",
+    status: "140px",
+    last_update: "145px"
+};
+
+const COLUMN_METADATA = [
+    { key: "actions", label: "Comandi" },
+    { key: "id", label: "ID" },
+    { key: "urgency", label: "Urgenza" },
+    { key: "drivers", label: "Drivers" },
+    { key: "odg", label: "ODG" },
+    { key: "title", label: "Titolo Attività" },
+    { key: "type", label: "Tipo" },
+    { key: "relevancy", label: "Rel (1-5)" },
+    { key: "pm", label: "PM" },
+    { key: "pe", label: "PE" },
+    { key: "beneficiary", label: "Beneficiari" },
+    { key: "cluster", label: "Cluster" },
+    { key: "basic_kit", label: "Basic/Kit" },
+    { key: "proto_n", label: "Proto" },
+    { key: "year_2027", label: "2027 (Mesi)" },
+    { key: "year_28", label: "28" },
+    { key: "year_29", label: "29" },
+    { key: "year_30", label: "30" },
+    { key: "year_31", label: "31" },
+    { key: "status", label: "Stato" },
+    { key: "last_update", label: "Last Update" }
+];
+
+function getActiveColumnOrder() {
+    const table = document.getElementById("main-dms-table");
+    if (!table) return DEFAULT_COLUMN_ORDER;
+    const headers = table.querySelectorAll("thead th");
+    const order = [];
+    headers.forEach(th => {
+        const colKey = th.getAttribute("data-col");
+        if (colKey) order.push(colKey);
+    });
+    return order.length > 0 ? order : DEFAULT_COLUMN_ORDER;
+}
+
+let currentSessionVisibility = null;
+
+function getColumnVisibility() {
+    if (currentSessionVisibility !== null) {
+        return currentSessionVisibility;
+    }
+    try {
+        const saved = localStorage.getItem("dms_col_visibility");
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (typeof parsed === "object" && parsed !== null) {
+                currentSessionVisibility = parsed;
+                return currentSessionVisibility;
+            }
+        }
+    } catch (e) {}
+    const def = {};
+    DEFAULT_COLUMN_ORDER.forEach(k => { def[k] = true; });
+    currentSessionVisibility = def;
+    return currentSessionVisibility;
+}
+
+function applyColumnsSession() {
+    const grid = document.getElementById("columns-checkbox-grid");
+    if (!grid) return;
+
+    const inputs = grid.querySelectorAll("input[type='checkbox']");
+    const vis = {};
+    let visibleCount = 0;
+
+    inputs.forEach(input => {
+        const key = input.getAttribute("data-col");
+        if (key) {
+            vis[key] = input.checked;
+            if (input.checked) visibleCount++;
+        }
+    });
+
+    if (visibleCount === 0) {
+        showToast("Seleziona almeno una colonna visibile!", "warning");
+        return;
+    }
+
+    // Applica in memoria solo per la sessione attuale (NON sovrascrive localStorage)
+    currentSessionVisibility = vis;
+
+    applyColumnVisibility();
+
+    if (allActivities) {
+        renderTableRows(allActivities);
+    }
+
+    closeColumnsModal();
+    showToast("Configurazione applicata alla sessione corrente (non salvata per i prossimi avvii)", "info");
+}
+
+function applyColumnVisibility() {
+    const vis = getColumnVisibility();
+    const table = document.getElementById("main-dms-table");
+    if (!table) return;
+    const headers = table.querySelectorAll("thead th");
+    headers.forEach(th => {
+        const colKey = th.getAttribute("data-col");
+        if (colKey) {
+            if (vis[colKey] === false) {
+                th.style.display = "none";
+            } else {
+                th.style.display = "";
+            }
+        }
+    });
+}
+
+function getVisibleColumnOrder() {
+    const fullOrder = getActiveColumnOrder();
+    const vis = getColumnVisibility();
+    return fullOrder.filter(k => vis[k] !== false);
+}
+
+function saveColumnOrder() {
+    const order = getActiveColumnOrder();
+    try {
+        localStorage.setItem("dms_col_order", JSON.stringify(order));
+    } catch (e) {}
+}
+
+function restoreColumnOrder() {
+    try {
+        const saved = localStorage.getItem("dms_col_order");
+        if (!saved) return;
+        const order = JSON.parse(saved);
+        if (!Array.isArray(order) || order.length === 0) return;
+
+        const table = document.getElementById("main-dms-table");
+        if (!table) return;
+        const theadTr = table.querySelector("thead tr");
+        if (!theadTr) return;
+        const currentHeaders = Array.from(theadTr.querySelectorAll("th"));
+        const headerMap = {};
+        currentHeaders.forEach(th => {
+            const key = th.getAttribute("data-col");
+            if (key) headerMap[key] = th;
+        });
+
+        // Riordina i th secondo l'ordine salvato
+        order.forEach(colKey => {
+            if (headerMap[colKey]) {
+                theadTr.appendChild(headerMap[colKey]);
+                delete headerMap[colKey];
+            }
+        });
+        // Aggiungi in coda eventuali nuove colonne non presenti nell'ordine salvato
+        Object.values(headerMap).forEach(th => theadTr.appendChild(th));
+    } catch (e) {}
+}
+
+function initColumnReorder() {
+    const table = document.getElementById("main-dms-table");
+    if (!table) return;
+    const theadTr = table.querySelector("thead tr");
+    if (!theadTr) return;
+    const headers = theadTr.querySelectorAll("th");
+
+    let draggedTh = null;
+
+    headers.forEach(th => {
+        th.setAttribute("draggable", "true");
+
+        th.addEventListener("dragstart", (e) => {
+            if (e.target.classList.contains("resizer") || e.target.closest(".th-sort-btn")) {
+                e.preventDefault();
+                return;
+            }
+            draggedTh = th;
+            th.classList.add("col-dragging");
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", th.getAttribute("data-col") || "");
+        });
+
+        th.addEventListener("dragend", () => {
+            if (draggedTh) {
+                draggedTh.classList.remove("col-dragging");
+                draggedTh = null;
+            }
+            headers.forEach(h => {
+                h.classList.remove("col-drag-over-left", "col-drag-over-right");
+            });
+        });
+
+        th.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            if (!draggedTh || draggedTh === th) return;
+            e.dataTransfer.dropEffect = "move";
+
+            const rect = th.getBoundingClientRect();
+            const relX = e.clientX - rect.left;
+            const isLeft = relX < (rect.width / 2);
+
+            if (isLeft) {
+                th.classList.add("col-drag-over-left");
+                th.classList.remove("col-drag-over-right");
+            } else {
+                th.classList.add("col-drag-over-right");
+                th.classList.remove("col-drag-over-left");
+            }
+        });
+
+        th.addEventListener("dragleave", () => {
+            th.classList.remove("col-drag-over-left", "col-drag-over-right");
+        });
+
+        th.addEventListener("drop", (e) => {
+            e.preventDefault();
+            th.classList.remove("col-drag-over-left", "col-drag-over-right");
+            if (!draggedTh || draggedTh === th) return;
+
+            const rect = th.getBoundingClientRect();
+            const relX = e.clientX - rect.left;
+            const insertBefore = relX < (rect.width / 2);
+
+            if (insertBefore) {
+                theadTr.insertBefore(draggedTh, th);
+            } else {
+                theadTr.insertBefore(draggedTh, th.nextSibling);
+            }
+
+            saveColumnOrder();
+            if (allActivities && allActivities.length > 0) {
+                renderTableRows(allActivities);
+            }
+        });
+    });
+}
 
 function initColumnResize() {
     const table = document.getElementById("main-dms-table");
+    if (!table) return;
     const headers = table.querySelectorAll("th");
 
     headers.forEach(th => {
@@ -118,6 +475,152 @@ function restoreColumnWidths() {
             }
         });
     } catch (e) {}
+}
+
+// --- GESTIONE PERSONALIZZAZIONE E PRESET COLONNE ---
+
+function openColumnsModal() {
+    const modal = document.getElementById("modal-columns-container");
+    const grid = document.getElementById("columns-checkbox-grid");
+    if (!modal || !grid) return;
+
+    const vis = getColumnVisibility();
+    const currentOrder = getActiveColumnOrder();
+
+    const metaMap = {};
+    COLUMN_METADATA.forEach(m => { metaMap[m.key] = m; });
+
+    grid.innerHTML = "";
+    currentOrder.forEach(colKey => {
+        const meta = metaMap[colKey] || { key: colKey, label: colKey };
+        const isChecked = vis[colKey] !== false;
+
+        const label = document.createElement("label");
+        label.style.display = "flex";
+        label.style.alignItems = "center";
+        label.style.gap = "8px";
+        label.style.padding = "7px 10px";
+        label.style.background = "#ffffff";
+        label.style.border = "1px solid var(--border)";
+        label.style.borderRadius = "6px";
+        label.style.cursor = "pointer";
+        label.style.userSelect = "none";
+        label.style.fontSize = "12px";
+        label.style.transition = "background 0.15s, border-color 0.15s";
+
+        label.innerHTML = `
+            <input type="checkbox" data-col="${meta.key}" ${isChecked ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; accent-color: var(--primary);">
+            <span style="font-weight: 500; color: var(--text);">${escapeHtml(meta.label)}</span>
+        `;
+        grid.appendChild(label);
+    });
+
+    modal.style.display = "flex";
+}
+
+function closeColumnsModal() {
+    const modal = document.getElementById("modal-columns-container");
+    if (modal) modal.style.display = "none";
+}
+
+function setAllColumnsVisibility(checkAll) {
+    const grid = document.getElementById("columns-checkbox-grid");
+    if (!grid) return;
+    const inputs = grid.querySelectorAll("input[type='checkbox']");
+    inputs.forEach(input => {
+        input.checked = checkAll;
+    });
+}
+
+function saveColumnsConfig() {
+    const grid = document.getElementById("columns-checkbox-grid");
+    if (!grid) return;
+
+    const inputs = grid.querySelectorAll("input[type='checkbox']");
+    const vis = {};
+    let visibleCount = 0;
+
+    inputs.forEach(input => {
+        const key = input.getAttribute("data-col");
+        if (key) {
+            vis[key] = input.checked;
+            if (input.checked) visibleCount++;
+        }
+    });
+
+    if (visibleCount === 0) {
+        showToast("Seleziona almeno una colonna visibile!", "warning");
+        return;
+    }
+
+    // Salva in memoria sessione e in localStorage per sessioni future
+    currentSessionVisibility = vis;
+    try {
+        localStorage.setItem("dms_col_visibility", JSON.stringify(vis));
+    } catch (e) {}
+
+    saveColumnOrder();
+    saveColumnWidths();
+
+    applyColumnVisibility();
+
+    if (allActivities) {
+        renderTableRows(allActivities);
+    }
+
+    closeColumnsModal();
+    showToast("Configurazione salvata per le sessioni future", "success");
+}
+
+function resetColumnsConfig() {
+    try {
+        localStorage.removeItem("dms_col_order");
+        localStorage.removeItem("dms_col_widths");
+        localStorage.removeItem("dms_col_visibility");
+    } catch (e) {}
+
+    // Ripristina stato visibilità sessione
+    const def = {};
+    DEFAULT_COLUMN_ORDER.forEach(k => { def[k] = true; });
+    currentSessionVisibility = def;
+
+    // 1. Ripristina ordine di default nel DOM thead
+    const table = document.getElementById("main-dms-table");
+    if (table) {
+        const theadTr = table.querySelector("thead tr");
+        if (theadTr) {
+            const currentHeaders = Array.from(theadTr.querySelectorAll("th"));
+            const headerMap = {};
+            currentHeaders.forEach(th => {
+                const key = th.getAttribute("data-col");
+                if (key) headerMap[key] = th;
+            });
+            DEFAULT_COLUMN_ORDER.forEach(colKey => {
+                if (headerMap[colKey]) {
+                    theadTr.appendChild(headerMap[colKey]);
+                }
+            });
+        }
+
+        // 2. Ripristina larghezze di default e mostra tutte le colonne
+        const headers = table.querySelectorAll("thead th");
+        headers.forEach(th => {
+            const colKey = th.getAttribute("data-col");
+            if (colKey && DEFAULT_COLUMN_WIDTHS[colKey]) {
+                th.style.width = DEFAULT_COLUMN_WIDTHS[colKey];
+                th.style.minWidth = DEFAULT_COLUMN_WIDTHS[colKey];
+            }
+            th.style.display = "";
+        });
+    }
+
+    // 3. Ridisegna la tabella con tutte le colonne visibili nel loro ordine originale
+    if (allActivities) {
+        renderTableRows(allActivities);
+    }
+
+    closeColumnsModal();
+    showToast("Configurazione predefinita ripristinata", "info");
 }
 
 // --- CONFIGURAZIONE & CARTELLA RETE ---
@@ -191,7 +694,7 @@ async function saveSharedConfig() {
             alert("Errore salvataggio: " + (data.error || ""));
         }
     } catch (err) {
-        alert("Errore chiamata server: " + err);
+        showToast("Errore connessione server: " + err, "error");
     }
 }
 
@@ -207,12 +710,156 @@ async function loadLookups() {
     }
 }
 
-function populateFilterDropdowns() {
-    populateSelect("filter-beneficiary", currentLookups.beneficiary || [], "Beneficiary (Tutti)");
-    populateSelect("filter-cluster", currentLookups.cluster || [], "Cluster (Tutti)");
-    populateSelect("filter-pm", currentLookups.person || [], "PM (Tutti)");
-    populateSelect("filter-proto", currentLookups.proto || [], "Proto (Tutti)");
+
+// --- GESTORE FILTRI MULTI-SELEZIONE (UNO O PIU ELEMENTI PER GRUPPO) ---
+
+const activeMultiFilters = {
+    year: new Set(),
+    urgency: new Set(),
+    beneficiary: new Set(),
+    cluster: new Set(),
+    pm: new Set(),
+    proto: new Set()
+};
+
+const MULTI_FILTER_CONFIG = {
+    year: { label: "Anno", defaultText: "Anno (Tutti)" },
+    urgency: { label: "Urgenza", defaultText: "Urgenza (Tutte)" },
+    beneficiary: { label: "Beneficiari", defaultText: "Beneficiari (Tutti)" },
+    cluster: { label: "Cluster", defaultText: "Cluster (Tutti)" },
+    pm: { label: "PM", defaultText: "PM (Tutti)" },
+    proto: { label: "Proto", defaultText: "Proto (Tutti)" }
+};
+
+function toggleMultiSelectMenu(group, event) {
+    if (event) event.stopPropagation();
+    const groupEl = document.getElementById(`ms-group-${group}`);
+    if (!groupEl) return;
+    const isOpen = groupEl.classList.contains("open");
+    closeAllMultiSelects();
+    if (!isOpen) {
+        groupEl.classList.add("open");
+    }
 }
+
+function closeAllMultiSelects() {
+    let closedAny = false;
+    document.querySelectorAll(".multiselect-dropdown.open").forEach(el => {
+        el.classList.remove("open");
+        closedAny = true;
+    });
+    return closedAny;
+}
+
+function initMultiFilters() {
+    renderMultiFilterOptions("year", ["2027", "2028", "2029", "2030", "2031"]);
+    renderMultiFilterOptions("urgency", ["CRITICAL", "HIGH", "MEDIUM", "LOW", "MINOR"]);
+}
+
+function populateFilterDropdowns() {
+    initMultiFilters();
+    renderMultiFilterOptions("beneficiary", (currentLookups.beneficiary || []).map(x => x.name));
+    renderMultiFilterOptions("cluster", (currentLookups.cluster || []).map(x => x.name));
+    renderMultiFilterOptions("pm", (currentLookups.person || []).map(x => x.name));
+    renderMultiFilterOptions("proto", (currentLookups.proto || []).map(x => x.name));
+}
+
+function renderMultiFilterOptions(group, items) {
+    const container = document.getElementById(`ms-options-${group}`);
+    if (!container) return;
+
+    const currentSelected = activeMultiFilters[group] || new Set();
+    container.innerHTML = "";
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: var(--text-muted); text-align: center;">Nessun elemento</div>`;
+        return;
+    }
+
+    let sortedItems = [...items];
+    if (group !== "year" && group !== "urgency") {
+        sortedItems.sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' }));
+    }
+
+    sortedItems.forEach(val => {
+        const isChecked = currentSelected.has(val);
+        const label = document.createElement("label");
+        label.className = "multiselect-option";
+
+        let contentHtml = `<span class="ms-opt-text">${escapeHtml(val)}</span>`;
+        if (group === "urgency") {
+            contentHtml = `<span class="badge-urg-${val}" style="padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">${escapeHtml(val)}</span>`;
+        }
+
+        label.innerHTML = `
+            <input type="checkbox" value="${escapeHtml(val)}" ${isChecked ? 'checked' : ''} onchange="onMultiFilterOptionChange('${group}', '${escapeHtml(val)}', this.checked)">
+            ${contentHtml}
+        `;
+        container.appendChild(label);
+    });
+
+    updateMultiFilterTrigger(group);
+}
+
+function onMultiFilterOptionChange(group, val, isChecked) {
+    if (isChecked) {
+        activeMultiFilters[group].add(val);
+    } else {
+        activeMultiFilters[group].delete(val);
+    }
+    updateMultiFilterTrigger(group);
+    reloadTable();
+}
+
+function updateMultiFilterTrigger(group) {
+    const trigger = document.getElementById(`ms-trigger-${group}`);
+    const labelSpan = document.getElementById(`ms-label-${group}`);
+    if (!trigger || !labelSpan) return;
+
+    const set = activeMultiFilters[group];
+    const cfg = MULTI_FILTER_CONFIG[group];
+
+    if (!set || set.size === 0) {
+        trigger.classList.remove("active-filter");
+        labelSpan.textContent = cfg.defaultText;
+    } else if (set.size === 1) {
+        trigger.classList.add("active-filter");
+        const val = Array.from(set)[0];
+        labelSpan.innerHTML = `${cfg.label}: <strong>${escapeHtml(val)}</strong>`;
+    } else if (set.size === 2) {
+        trigger.classList.add("active-filter");
+        const arr = Array.from(set);
+        labelSpan.innerHTML = `${cfg.label}: ${escapeHtml(arr[0])}, ${escapeHtml(arr[1])}`;
+    } else {
+        trigger.classList.add("active-filter");
+        labelSpan.innerHTML = `${cfg.label} <span class="ms-badge-count">${set.size}</span>`;
+    }
+}
+
+function selectAllInGroup(group) {
+    const container = document.getElementById(`ms-options-${group}`);
+    if (!container) return;
+    const inputs = container.querySelectorAll("input[type='checkbox']");
+    inputs.forEach(inp => {
+        inp.checked = true;
+        activeMultiFilters[group].add(inp.value);
+    });
+    updateMultiFilterTrigger(group);
+    reloadTable();
+}
+
+function clearGroup(group) {
+    const container = document.getElementById(`ms-options-${group}`);
+    if (!container) return;
+    const inputs = container.querySelectorAll("input[type='checkbox']");
+    inputs.forEach(inp => {
+        inp.checked = false;
+    });
+    activeMultiFilters[group].clear();
+    updateMultiFilterTrigger(group);
+    reloadTable();
+}
+
 
 function populateSelect(elemId, items, placeholder) {
     const sel = document.getElementById(elemId);
@@ -266,8 +913,15 @@ function getFilterParams() {
     if (document.getElementById("vs-hide-rejected").checked) statusExcludes.push("Rejected");
     statusExcludes.forEach(s => params.append("status_exclude", s));
 
-    const urgency = document.getElementById("filter-urgency").value;
-    if (urgency) params.set("urgency", urgency);
+    // Urgenza e gli altri filtri raggruppati sono gestiti dinamicamente via activeMultiFilters
+    if (typeof activeMultiFilters !== 'undefined') {
+        activeMultiFilters.year.forEach(y => params.append("year", y));
+        activeMultiFilters.urgency.forEach(u => params.append("urgency", u));
+        activeMultiFilters.beneficiary.forEach(b => params.append("beneficiary", b));
+        activeMultiFilters.cluster.forEach(c => params.append("cluster", c));
+        activeMultiFilters.pm.forEach(p => params.append("pm", p));
+        activeMultiFilters.proto.forEach(pr => params.append("proto", pr));
+    }
 
     const search = document.getElementById("global-search").value.trim();
     if (search) params.set("search", search);
@@ -276,8 +930,8 @@ function getFilterParams() {
         params.set("expiring_in_5_days", "true");
     }
 
-    const sortBy = document.getElementById("sort-select").value;
-    if (sortBy) params.set("sort_by", sortBy);
+
+
 
     return params;
 }
@@ -289,31 +943,235 @@ async function reloadTable() {
         const res = await fetch(`/api/activities?${params.toString()}`);
         let activities = await res.json();
 
-        const fYear = document.getElementById("filter-year").value;
-        const fBen = document.getElementById("filter-beneficiary").value;
-        const fClu = document.getElementById("filter-cluster").value;
-        const fPm = document.getElementById("filter-pm").value;
-        const fProto = document.getElementById("filter-proto").value;
-
-        if (fYear) {
+        // FILTRO MULTI-SELEZIONE: ANNO (logica OR tra gli anni selezionati)
+        if (activeMultiFilters.year.size > 0) {
+            const years = Array.from(activeMultiFilters.year);
             activities = activities.filter(a => {
-                if (fYear === "2027") return a.year_2027 && a.year_2027.trim() !== "";
-                if (fYear === "2028") return a.year_28 == 1;
-                if (fYear === "2029") return a.year_29 == 1;
-                if (fYear === "2030") return a.year_30 == 1;
-                if (fYear === "2031") return a.year_31 == 1;
-                return true;
+                return years.some(y => {
+                    if (y === "2027") return a.year_2027 && a.year_2027.trim() !== "";
+                    if (y === "2028") return a.year_28 == 1;
+                    if (y === "2029") return a.year_29 == 1;
+                    if (y === "2030") return a.year_30 == 1;
+                    if (y === "2031") return a.year_31 == 1;
+                    return false;
+                });
             });
         }
-        if (fBen) activities = activities.filter(a => a.beneficiary === fBen);
-        if (fClu) activities = activities.filter(a => a.cluster === fClu);
-        if (fPm) activities = activities.filter(a => a.pm === fPm);
-        if (fProto) activities = activities.filter(a => a.proto_n === fProto);
 
+        // FILTRO MULTI-SELEZIONE: URGENZA
+        if (activeMultiFilters.urgency.size > 0) {
+            activities = activities.filter(a => activeMultiFilters.urgency.has(a.urgency));
+        }
+
+        // FILTRO MULTI-SELEZIONE: BENEFICIARY
+        if (activeMultiFilters.beneficiary.size > 0) {
+            activities = activities.filter(a => activeMultiFilters.beneficiary.has(a.beneficiary));
+        }
+
+        // FILTRO MULTI-SELEZIONE: CLUSTER
+        if (activeMultiFilters.cluster.size > 0) {
+            activities = activities.filter(a => activeMultiFilters.cluster.has(a.cluster));
+        }
+
+        // FILTRO MULTI-SELEZIONE: PM
+        if (activeMultiFilters.pm.size > 0) {
+            activities = activities.filter(a => activeMultiFilters.pm.has(a.pm));
+        }
+
+        // FILTRO MULTI-SELEZIONE: PROTO
+        if (activeMultiFilters.proto.size > 0) {
+            activities = activities.filter(a => activeMultiFilters.proto.has(a.proto_n));
+        }
+
+        sortActivities(activities, currentSortCol, currentSortDir);
         allActivities = activities;
         renderTableRows(activities);
+        updateSortIndicators();
+        const statsBadge = document.getElementById("table-stats-badge");
+        if (statsBadge) {
+            statsBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> ${activities.length} attività`;
+        }
     } catch (err) {
         console.error("Errore caricamento tabella:", err);
+    }
+}
+
+function buildCellHtml(colKey, act, formattedId, allowedStatuses) {
+    switch (colKey) {
+        case "actions":
+            return `
+                <td style="text-align: center;">
+                    <div class="row-actions-flex">
+                        <button class="btn-row-action btn-row-open" onclick="openIdModal(${act.id})" title="Apri scheda dettaglio">
+                            OPEN
+                        </button>
+                        <button class="btn-row-action btn-row-cancel" onclick="handleCancelActivity(${act.id})" title="Imposta su Cancelled">
+                            CANCEL
+                        </button>
+                        <button class="btn-row-action btn-row-folder" onclick="handleOpenFolder(${act.id})" title="Apri cartella Windows">
+                            FOLDER
+                        </button>
+                    </div>
+                </td>
+            `;
+        case "id":
+            return `<td><span class="badge-id">${formattedId}</span></td>`;
+        case "urgency":
+            return `
+                <td>
+                    <select class="select-modern badge-urg-${act.urgency}" style="font-weight: 700; border: none; padding: 2px 4px;" onchange="saveInlineField(${act.id}, 'urgency', this.value, this); this.className='select-modern badge-urg-' + this.value;">
+                        ${["CRITICAL", "HIGH", "MEDIUM", "LOW", "MINOR"].map(u => 
+                            `<option value="${u}" ${act.urgency === u ? 'selected' : ''}>${u}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "drivers":
+            return `
+                <td style="color: var(--text-secondary); font-size: 11px;" title="${act.drivers_str || ''}">
+                    ${act.drivers_str || '-'}
+                </td>
+            `;
+        case "odg":
+            return `
+                <td style="text-align: center;">
+                    <input type="checkbox" ${act.odg === 'Y' ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'odg', this.checked ? 'Y' : 'N', this)">
+                </td>
+            `;
+        case "title":
+            return `
+                <td>
+                    <input type="text" class="cell-input cell-title-text" value="${escapeHtml(act.title)}" onchange="saveInlineField(${act.id}, 'title', this.value, this)">
+                </td>
+            `;
+        case "type":
+            return `
+                <td>
+                    <select class="select-modern badge-type-${act.type}" style="font-weight: 600; border: none; padding: 2px 4px;" onchange="handleTypeChangeInline(${act.id}, this.value)">
+                        ${["Project", "Task", "Idea", "Discussion"].map(t => 
+                            `<option value="${t}" ${act.type === t ? 'selected' : ''}>${t}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "relevancy":
+            return `
+                <td style="text-align: center;">
+                    <select class="cell-input" style="text-align: center; font-weight: 600;" onchange="saveInlineField(${act.id}, 'relevancy', this.value, this)">
+                        ${[1, 2, 3, 4, 5].map(r => 
+                            `<option value="${r}" ${act.relevancy == r ? 'selected' : ''}>${r}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "pm":
+            return `
+                <td>
+                    <select class="cell-input" onchange="saveInlineField(${act.id}, 'pm', this.value, this)">
+                        <option value="">--</option>
+                        ${(currentLookups.person || []).map(p => 
+                            `<option value="${p.name}" ${act.pm === p.name ? 'selected' : ''}>${p.name}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "pe":
+            return `
+                <td>
+                    <select class="cell-input" onchange="saveInlineField(${act.id}, 'pe', this.value, this)">
+                        <option value="">--</option>
+                        ${(currentLookups.person || []).map(p => 
+                            `<option value="${p.name}" ${act.pe === p.name ? 'selected' : ''}>${p.name}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "beneficiary":
+            return `
+                <td>
+                    <select class="cell-input" onchange="saveInlineField(${act.id}, 'beneficiary', this.value, this)">
+                        <option value="">--</option>
+                        ${(currentLookups.beneficiary || []).map(b => 
+                            `<option value="${b.name}" ${act.beneficiary === b.name ? 'selected' : ''}>${b.name}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "cluster":
+            return `
+                <td>
+                    <select class="cell-input" onchange="saveInlineField(${act.id}, 'cluster', this.value, this)">
+                        <option value="">--</option>
+                        ${(currentLookups.cluster || []).map(c => 
+                            `<option value="${c.name}" ${act.cluster === c.name ? 'selected' : ''}>${c.name}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "basic_kit":
+            return `
+                <td>
+                    <select class="cell-input" onchange="saveInlineField(${act.id}, 'basic_kit', this.value, this)">
+                        <option value="Basic" ${act.basic_kit === 'Basic' ? 'selected' : ''}>Basic</option>
+                        <option value="Kit" ${act.basic_kit === 'Kit' ? 'selected' : ''}>Kit</option>
+                    </select>
+                </td>
+            `;
+        case "proto_n":
+            return `
+                <td>
+                    <select class="cell-input" onchange="saveInlineField(${act.id}, 'proto_n', this.value, this)">
+                        <option value="">--</option>
+                        ${(currentLookups.proto || []).map(pr => 
+                            `<option value="${pr.name}" ${act.proto_n === pr.name ? 'selected' : ''}>${pr.name}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "year_2027":
+            return `
+                <td>
+                    <input type="text" class="cell-input" value="${escapeHtml(act.year_2027 || '')}" placeholder="Mesi..." onchange="saveInlineField(${act.id}, 'year_2027', this.value, this)">
+                </td>
+            `;
+        case "year_28":
+            return `
+                <td style="text-align: center;">
+                    <input type="checkbox" ${act.year_28 == 1 ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'year_28', this.checked ? 1 : 0, this)">
+                </td>
+            `;
+        case "year_29":
+            return `
+                <td style="text-align: center;">
+                    <input type="checkbox" ${act.year_29 == 1 ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'year_29', this.checked ? 1 : 0, this)">
+                </td>
+            `;
+        case "year_30":
+            return `
+                <td style="text-align: center;">
+                    <input type="checkbox" ${act.year_30 == 1 ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'year_30', this.checked ? 1 : 0, this)">
+                </td>
+            `;
+        case "year_31":
+            return `
+                <td style="text-align: center;">
+                    <input type="checkbox" ${act.year_31 == 1 ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'year_31', this.checked ? 1 : 0, this)">
+                </td>
+            `;
+        case "status":
+            return `
+                <td>
+                    <select class="cell-input" style="font-weight: 500;" id="inline-status-${act.id}" onchange="saveInlineField(${act.id}, 'status', this.value, this)">
+                        ${allowedStatuses.map(s => 
+                            `<option value="${s}" ${act.status === s ? 'selected' : ''}>${s}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+        case "last_update":
+            return `<td style="color: var(--text-muted); font-size: 10.5px;">${act.last_update || '-'}</td>`;
+        default:
+            return `<td></td>`;
     }
 }
 
@@ -321,148 +1179,186 @@ function renderTableRows(activities) {
     const tbody = document.getElementById("activities-table-body");
     tbody.innerHTML = "";
 
+    const visibleOrder = getVisibleColumnOrder();
+
     if (activities.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="21" style="text-align:center; padding: 32px; color: var(--text-muted); font-size: 13px;">Nessuna attività trovata con i filtri attuali.</td></tr>`;
+        const colSpan = Math.max(1, visibleOrder.length);
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 32px; color: var(--text-muted); font-size: 13px;">Nessuna attività trovata con i filtri attuali.</td></tr>`;
         return;
     }
 
     activities.forEach(act => {
         const tr = document.createElement("tr");
-        if (act.urgent_actions_count > 0) {
-            tr.classList.add("urgent-item");
-        }
+
+
+
 
         const formattedId = String(act.id).padStart(5, '0');
         const allowedStatuses = TYPE_STATUS_MAP[act.type] || [];
 
-        tr.innerHTML = `
-            <td style="text-align: center;">
-                <div class="row-actions-flex">
-                    <button class="btn-row-action btn-row-open" onclick="openIdModal(${act.id})" title="Apri scheda dettaglio">
-                        OPEN
-                    </button>
-                    <button class="btn-row-action btn-row-cancel" onclick="handleCancelActivity(${act.id})" title="Imposta su Cancelled">
-                        CANCEL
-                    </button>
-                    <button class="btn-row-action btn-row-folder" onclick="handleOpenFolder(${act.id})" title="Apri cartella Windows">
-                        FOLDER
-                    </button>
-                </div>
-            </td>
-            <td><span class="badge-id">${formattedId}</span></td>
-            <td>
-                <select class="select-modern badge-urg-${act.urgency}" style="font-weight: 700; border: none; padding: 2px 4px;" onchange="saveInlineField(${act.id}, 'urgency', this.value); this.className='select-modern badge-urg-' + this.value;">
-                    ${["CRITICAL", "HIGH", "MEDIUM", "LOW", "MINOR"].map(u => 
-                        `<option value="${u}" ${act.urgency === u ? 'selected' : ''}>${u}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td style="color: var(--text-secondary); font-size: 11px;" title="${act.drivers_str || ''}">
-                ${act.drivers_str || '-'}
-            </td>
-            <td style="text-align: center;">
-                <input type="checkbox" ${act.odg === 'Y' ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'odg', this.checked ? 'Y' : 'N')">
-            </td>
-            <td>
-                <input type="text" class="cell-input cell-title-text" value="${escapeHtml(act.title)}" onchange="saveInlineField(${act.id}, 'title', this.value)">
-            </td>
-            <td>
-                <select class="select-modern badge-type-${act.type}" style="font-weight: 600; border: none; padding: 2px 4px;" onchange="handleTypeChangeInline(${act.id}, this.value)">
-                    ${["Project", "Task", "Idea", "Discussion"].map(t => 
-                        `<option value="${t}" ${act.type === t ? 'selected' : ''}>${t}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td style="text-align: center;">
-                <select class="cell-input" style="text-align: center; font-weight: 600;" onchange="saveInlineField(${act.id}, 'relevancy', this.value)">
-                    ${[1, 2, 3, 4, 5].map(r => 
-                        `<option value="${r}" ${act.relevancy == r ? 'selected' : ''}>${r}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td>
-                <select class="cell-input" onchange="saveInlineField(${act.id}, 'pm', this.value)">
-                    <option value="">--</option>
-                    ${(currentLookups.person || []).map(p => 
-                        `<option value="${p.name}" ${act.pm === p.name ? 'selected' : ''}>${p.name}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td>
-                <select class="cell-input" onchange="saveInlineField(${act.id}, 'pe', this.value)">
-                    <option value="">--</option>
-                    ${(currentLookups.person || []).map(p => 
-                        `<option value="${p.name}" ${act.pe === p.name ? 'selected' : ''}>${p.name}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td>
-                <select class="cell-input" onchange="saveInlineField(${act.id}, 'beneficiary', this.value)">
-                    <option value="">--</option>
-                    ${(currentLookups.beneficiary || []).map(b => 
-                        `<option value="${b.name}" ${act.beneficiary === b.name ? 'selected' : ''}>${b.name}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td>
-                <select class="cell-input" onchange="saveInlineField(${act.id}, 'cluster', this.value)">
-                    <option value="">--</option>
-                    ${(currentLookups.cluster || []).map(c => 
-                        `<option value="${c.name}" ${act.cluster === c.name ? 'selected' : ''}>${c.name}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td>
-                <select class="cell-input" onchange="saveInlineField(${act.id}, 'basic_kit', this.value)">
-                    <option value="Basic" ${act.basic_kit === 'Basic' ? 'selected' : ''}>Basic</option>
-                    <option value="Kit" ${act.basic_kit === 'Kit' ? 'selected' : ''}>Kit</option>
-                </select>
-            </td>
-            <td>
-                <select class="cell-input" onchange="saveInlineField(${act.id}, 'proto_n', this.value)">
-                    <option value="">--</option>
-                    ${(currentLookups.proto || []).map(pr => 
-                        `<option value="${pr.name}" ${act.proto_n === pr.name ? 'selected' : ''}>${pr.name}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td>
-                <input type="text" class="cell-input" value="${escapeHtml(act.year_2027 || '')}" placeholder="Mesi..." onchange="saveInlineField(${act.id}, 'year_2027', this.value)">
-            </td>
-            <td style="text-align: center;">
-                <input type="checkbox" ${act.year_28 == 1 ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'year_28', this.checked ? 1 : 0)">
-            </td>
-            <td style="text-align: center;">
-                <input type="checkbox" ${act.year_29 == 1 ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'year_29', this.checked ? 1 : 0)">
-            </td>
-            <td style="text-align: center;">
-                <input type="checkbox" ${act.year_30 == 1 ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'year_30', this.checked ? 1 : 0)">
-            </td>
-            <td style="text-align: center;">
-                <input type="checkbox" ${act.year_31 == 1 ? 'checked' : ''} onchange="saveInlineField(${act.id}, 'year_31', this.checked ? 1 : 0)">
-            </td>
-            <td>
-                <select class="cell-input" style="font-weight: 500;" id="inline-status-${act.id}" onchange="saveInlineField(${act.id}, 'status', this.value)">
-                    ${allowedStatuses.map(s => 
-                        `<option value="${s}" ${act.status === s ? 'selected' : ''}>${s}</option>`
-                    ).join('')}
-                </select>
-            </td>
-            <td style="color: var(--text-muted); font-size: 10.5px;">${act.last_update || '-'}</td>
-        `;
+        let rowHtml = "";
+        visibleOrder.forEach(colKey => {
+            rowHtml += buildCellHtml(colKey, act, formattedId, allowedStatuses);
+        });
 
+        tr.innerHTML = rowHtml;
         tbody.appendChild(tr);
     });
 }
 
-async function saveInlineField(activityId, fieldName, value) {
+// --- ORDINAMENTO CLIENT-SIDE PER COLONNE (R3) ---
+
+function sortActivities(arr, colKey, dir) {
+    if (!arr || arr.length === 0 || !colKey) return arr;
+    const factor = dir === "asc" ? 1 : -1;
+
+    arr.sort((a, b) => {
+        let cmp = 0;
+        switch (colKey) {
+            case "id":
+                cmp = (Number(a.id) || 0) - (Number(b.id) || 0);
+                break;
+            case "urgency": {
+                const uMap = { "CRITICAL": 1, "HIGH": 2, "MEDIUM": 3, "LOW": 4, "MINOR": 5 };
+                const rankA = uMap[a.urgency] || 99;
+                const rankB = uMap[b.urgency] || 99;
+                cmp = rankA - rankB;
+                break;
+            }
+            case "relevancy":
+                cmp = (Number(a.relevancy) || 0) - (Number(b.relevancy) || 0);
+                break;
+            case "odg": {
+                const valA = a.odg === "Y" ? 1 : 0;
+                const valB = b.odg === "Y" ? 1 : 0;
+                cmp = valA - valB;
+                break;
+            }
+            case "year_28":
+                cmp = (Number(a.year_28) || 0) - (Number(b.year_28) || 0);
+                break;
+            case "year_29":
+                cmp = (Number(a.year_29) || 0) - (Number(b.year_29) || 0);
+                break;
+            case "year_30":
+                cmp = (Number(a.year_30) || 0) - (Number(b.year_30) || 0);
+                break;
+            case "year_31":
+                cmp = (Number(a.year_31) || 0) - (Number(b.year_31) || 0);
+                break;
+            case "drivers": {
+                const strA = (a.drivers_str || a.drivers || "").trim();
+                const strB = (b.drivers_str || b.drivers || "").trim();
+                cmp = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: "base" });
+                break;
+            }
+            case "last_update": {
+                const dateA = a.last_update || "";
+                const dateB = b.last_update || "";
+                cmp = dateA.localeCompare(dateB);
+                break;
+            }
+            case "title":
+            case "type":
+            case "pm":
+            case "pe":
+            case "beneficiary":
+            case "cluster":
+            case "basic_kit":
+            case "proto_n":
+            case "year_2027":
+            case "status":
+            default: {
+                const valA = (a[colKey] != null ? String(a[colKey]) : "").trim();
+                const valB = (b[colKey] != null ? String(b[colKey]) : "").trim();
+                cmp = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: "base" });
+                break;
+            }
+        }
+        if (cmp !== 0) {
+            return cmp * factor;
+        }
+        return (Number(a.id) || 0) - (Number(b.id) || 0);
+    });
+
+    return arr;
+}
+
+function handleSort(colKey, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    if (!colKey || colKey === "actions") return;
+
+    if (currentSortCol === colKey) {
+        currentSortDir = currentSortDir === "asc" ? "desc" : "asc";
+    } else {
+        currentSortCol = colKey;
+        currentSortDir = "asc";
+    }
+
+    if (allActivities && allActivities.length > 0) {
+        sortActivities(allActivities, currentSortCol, currentSortDir);
+        renderTableRows(allActivities);
+    }
+    updateSortIndicators();
+}
+
+function updateSortIndicators() {
+    const table = document.getElementById("main-dms-table");
+    if (!table) return;
+    const headers = table.querySelectorAll("thead th");
+    headers.forEach(th => {
+        const colKey = th.getAttribute("data-col");
+        if (!colKey || colKey === "actions") return;
+
+        const sortBtn = th.querySelector(".th-sort-btn");
+        const icon = th.querySelector(".sort-icon");
+
+        th.classList.remove("th-sorted-asc", "th-sorted-desc");
+        if (sortBtn) sortBtn.classList.remove("active");
+
+        if (colKey === currentSortCol) {
+            th.classList.add(currentSortDir === "asc" ? "th-sorted-asc" : "th-sorted-desc");
+            if (sortBtn) {
+                sortBtn.classList.add("active");
+                sortBtn.title = `Ordinato per ${colKey} (${currentSortDir === "asc" ? "Crescente" : "Decrescente"}) - Clicca per invertire`;
+            }
+            if (icon) {
+                icon.textContent = currentSortDir === "asc" ? "▲" : "▼";
+            }
+        } else {
+            if (sortBtn) {
+                sortBtn.title = `Ordina per ${colKey}`;
+            }
+            if (icon) {
+                icon.textContent = "▲";
+            }
+        }
+    });
+}
+
+async function saveInlineField(activityId, fieldName, value, eventTarget = null) {
     try {
-        await fetch(`/api/activities/${activityId}/field`, {
+        const res = await fetch(`/api/activities/${activityId}/field`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ field: fieldName, value: value })
         });
+        const data = await res.json();
+        if (data.success) {
+            const item = (allActivities || []).find(a => a.id === activityId);
+            if (item) item[fieldName] = value;
+            if (eventTarget) {
+                eventTarget.classList.add("saving-flash");
+                setTimeout(() => eventTarget.classList.remove("saving-flash"), 400);
+            }
+        } else {
+            showToast("Errore salvataggio campo: " + (data.error || ""), "error");
+        }
     } catch (err) {
+        showToast("Errore di connessione durante il salvataggio", "error");
         console.error("Errore salvataggio inline:", err);
     }
 }
@@ -481,7 +1377,7 @@ async function handleNewId() {
             openIdModal(data.id);
         }
     } catch (err) {
-        alert("Errore creazione nuovo ID: " + err);
+        showToast("Errore creazione nuovo ID: " + err, "error");
     }
 }
 
@@ -494,7 +1390,7 @@ async function handleCancelActivity(activityId) {
                 reloadTable();
             }
         } catch (err) {
-            alert("Errore operazione: " + err);
+            showToast("Errore operazione: " + err, "error");
         }
     }
 }
@@ -504,10 +1400,10 @@ async function handleOpenFolder(activityId) {
         const res = await fetch(`/api/activities/${activityId}/folder`, { method: "POST" });
         const data = await res.json();
         if (!data.success) {
-            alert("Errore apertura cartella: " + (data.error || ""));
+            showToast("Errore apertura cartella: " + (data.error || ""), "error");
         }
     } catch (err) {
-        alert("Errore chiamata server: " + err);
+        showToast("Errore connessione server: " + err, "error");
     }
 }
 
@@ -578,7 +1474,7 @@ async function openIdModal(activityId) {
         switchModalTab('execution');
         document.getElementById("modal-id-container").style.display = "flex";
     } catch (err) {
-        alert("Errore apertura scheda: " + err);
+        showToast("Errore apertura scheda: " + err, "error");
     }
 }
 
@@ -908,7 +1804,7 @@ async function saveCurrentActivity() {
             alert("Errore salvataggio: " + (data.error || ""));
         }
     } catch (err) {
-        alert("Errore chiamata server: " + err);
+        showToast("Errore connessione server: " + err, "error");
     }
 }
 
@@ -1018,4 +1914,38 @@ function escapeHtml(text) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+
+function resetAllFilters() {
+    // Reset View setup to default
+    document.getElementById("vs-type-project").checked = true;
+    document.getElementById("vs-type-task").checked = true;
+    document.getElementById("vs-type-idea").checked = true;
+    document.getElementById("vs-type-discussion").checked = true;
+    document.getElementById("vs-hide-closed").checked = true;
+    document.getElementById("vs-hide-cancelled").checked = true;
+    document.getElementById("vs-hide-onhold").checked = true;
+    document.getElementById("vs-hide-rejected").checked = true;
+
+    // Reset filtri multi-selezione
+    Object.keys(activeMultiFilters).forEach(group => {
+        activeMultiFilters[group].clear();
+        const container = document.getElementById(`ms-options-${group}`);
+        if (container) {
+            container.querySelectorAll("input[type='checkbox']").forEach(inp => inp.checked = false);
+        }
+        updateMultiFilterTrigger(group);
+    });
+    document.getElementById("global-search").value = "";
+    currentSortCol = "id";
+    currentSortDir = "desc";
+    updateSortIndicators();
+
+    if (isExpiringFilterActive) {
+        toggleExpiringFilter();
+    } else {
+        reloadTable();
+    }
+    showToast("Tutti i filtri sono stati azzerati", "info");
 }

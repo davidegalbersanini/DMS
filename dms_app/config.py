@@ -16,14 +16,16 @@ def get_bundle_dir():
     """Restituisce la cartella interna dove PyInstaller decomprime i file statici o la cartella corrente."""
     if getattr(sys, 'frozen', False):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
-        if os.path.exists(os.path.join(base_path, "static")):
-            return base_path
-        # Fallback cartella exe
-        exe_dir = os.path.dirname(sys.executable)
-        if os.path.exists(os.path.join(exe_dir, "static")):
-            return exe_dir
-        if os.path.exists(os.path.join(exe_dir, "dms_app", "static")):
-            return os.path.join(exe_dir, "dms_app")
+        # Verifica tutte le possibili posizioni dei file statici dentro l'archivio estratto
+        candidates = [
+            os.path.join(base_path, "dms_app", "static"),
+            os.path.join(base_path, "static"),
+            os.path.join(os.path.dirname(sys.executable), "dms_app", "static"),
+            os.path.join(os.path.dirname(sys.executable), "static")
+        ]
+        for c in candidates:
+            if os.path.exists(c) and os.path.exists(os.path.join(c, "index.html")):
+                return os.path.dirname(c)
         return base_path
     return os.path.dirname(os.path.abspath(__file__))
 

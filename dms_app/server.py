@@ -139,7 +139,7 @@ class DMSRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         elif path == "/api/export/excel":
             search = query.get("search", [None])[0]
-            urgency = query.get("urgency", [None])[0]
+            urgency_list = query.get("urgency", [])
             status_exclude = query.get("status_exclude", [])
             type_exclude = query.get("type_exclude", [])
             expiring_in_5_days = query.get("expiring_in_5_days", ["false"])[0].lower() == "true"
@@ -147,12 +147,38 @@ class DMSRequestHandler(http.server.SimpleHTTPRequestHandler):
 
             acts = database.get_activities_list(
                 search=search,
-                urgency=urgency,
                 status_exclude=status_exclude,
                 type_exclude=type_exclude,
                 expiring_in_5_days=expiring_in_5_days,
                 sort_by=sort_by
             )
+
+            # Filtri multi-selezione per Excel
+            year_list = query.get("year", [])
+            ben_list = query.get("beneficiary", [])
+            clu_list = query.get("cluster", [])
+            pm_list = query.get("pm", [])
+            proto_list = query.get("proto", [])
+
+            if year_list:
+                acts = [a for a in acts if any(
+                    (y == "2027" and a.get("year_2027") and a.get("year_2027").strip() != "") or
+                    (y == "2028" and a.get("year_28") == 1) or
+                    (y == "2029" and a.get("year_29") == 1) or
+                    (y == "2030" and a.get("year_30") == 1) or
+                    (y == "2031" and a.get("year_31") == 1)
+                    for y in year_list
+                )]
+            if urgency_list:
+                acts = [a for a in acts if a.get("urgency") in urgency_list]
+            if ben_list:
+                acts = [a for a in acts if a.get("beneficiary") in ben_list]
+            if clu_list:
+                acts = [a for a in acts if a.get("cluster") in clu_list]
+            if pm_list:
+                acts = [a for a in acts if a.get("pm") in pm_list]
+            if proto_list:
+                acts = [a for a in acts if a.get("proto_n") in proto_list]
 
             headers = [
                 "ID", "Title", "Type", "Status", "Urgency", "Relevancy", "ODG", "Drivers",

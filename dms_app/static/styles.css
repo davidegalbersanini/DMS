@@ -333,9 +333,9 @@ body {
     text-transform: uppercase;
     font-size: 10.5px;
     letter-spacing: 0.5px;
-    padding: 9px 8px;
+    padding: 8px 6px;
     border-bottom: 2px solid var(--border);
-    border-right: 1px solid #f1f5f9;
+    border-right: 1px solid #e2e8f0;
     position: sticky;
     top: 0;
     z-index: 20;
@@ -343,6 +343,90 @@ body {
     white-space: nowrap;
     overflow: hidden;
     user-select: none;
+    cursor: grab;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+/* HEADER SORT CONTROLS */
+.th-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    vertical-align: middle;
+    max-width: calc(100% - 7px);
+}
+
+th[style*="text-align: center"] .th-content {
+    justify-content: center;
+}
+
+.th-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.th-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 1px 2px;
+    margin: 0;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 8px;
+    line-height: 1;
+    opacity: 0.35;
+    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.modern-table th:hover .th-sort-btn {
+    opacity: 0.75;
+}
+
+.th-sort-btn:hover {
+    opacity: 1 !important;
+    background: #e2e8f0;
+    color: var(--text-primary);
+}
+
+.th-sort-btn.active {
+    opacity: 1 !important;
+    color: var(--primary) !important;
+    font-weight: 700;
+}
+
+.modern-table th.th-sorted-asc,
+.modern-table th.th-sorted-desc {
+    background: #f1f5f9;
+}
+
+.modern-table th.th-sorted-asc .th-sort-btn,
+.modern-table th.th-sorted-desc .th-sort-btn {
+    opacity: 1 !important;
+    color: var(--primary) !important;
+}
+
+.modern-table th:active {
+    cursor: grabbing;
+}
+
+.modern-table th.col-dragging {
+    opacity: 0.45;
+    background: #e2e8f0;
+}
+
+.modern-table th.col-drag-over-left {
+    border-left: 3px solid var(--primary) !important;
+}
+
+.modern-table th.col-drag-over-right {
+    border-right: 3px solid var(--primary) !important;
 }
 
 /* HANDLE RESIZE COLONNA */
@@ -365,7 +449,7 @@ body {
 .modern-table td {
     padding: 6px 8px;
     border-bottom: 1px solid #f1f5f9;
-    border-right: 1px solid #fafafa;
+    border-right: 1px solid #e2e8f0;
     vertical-align: middle;
     white-space: nowrap;
     overflow: hidden;
@@ -375,13 +459,6 @@ body {
 
 .modern-table tbody tr:hover td {
     background-color: #f8fafc;
-}
-
-.modern-table tbody tr.urgent-item td {
-    background-color: #fffbeb;
-}
-.modern-table tbody tr.urgent-item td:first-child {
-    border-left: 3px solid var(--warning);
 }
 
 /* BADGE SEMANTICI MODERNI */
@@ -654,6 +731,91 @@ body {
     background: #ffffff;
 }
 
+/* TOAST NOTIFICATIONS */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #0f172a;
+    color: #f8fafc;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    font-size: 12px;
+    font-weight: 500;
+    pointer-events: auto;
+    animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    border-left: 4px solid var(--primary);
+    max-width: 380px;
+    line-height: 1.4;
+}
+
+.toast.toast-success {
+    border-left-color: var(--success);
+}
+
+.toast.toast-error {
+    border-left-color: var(--danger);
+}
+
+.toast.toast-info {
+    border-left-color: #38bdf8;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes toastFadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+/* MICRO-FEEDBACK SALVATAGGIO INLINE */
+.cell-input.saving-flash, select.saving-flash, input.saving-flash {
+    outline: 2px solid var(--success) !important;
+    background-color: var(--success-light) !important;
+    transition: all 0.2s ease;
+}
+
+/* BADGE STATS / COUNTER FILTRI */
+.filter-stats-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: #e2e8f0;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
 /* FOOTER MODAL */
 .modal-footer-bar {
     background: #f8fafc;
@@ -690,3 +852,165 @@ body {
         margin: 8mm;
     }
 }
+
+/* MULTI-SELECT DROPDOWNS PER FILTRI */
+.multiselect-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.multiselect-trigger {
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 5px 9px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    outline: none;
+    line-height: 1.4;
+}
+
+.multiselect-trigger:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.multiselect-trigger.active-filter {
+    border-color: var(--primary);
+    background: #eef2ff;
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.multiselect-trigger .ms-label {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.multiselect-trigger .ms-badge-count {
+    background: var(--primary);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 1px 6px;
+    margin-left: 2px;
+}
+
+.multiselect-trigger .ms-chevron {
+    transition: transform 0.2s ease;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.multiselect-dropdown.open .multiselect-trigger .ms-chevron {
+    transform: rotate(180deg);
+}
+
+.multiselect-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1050;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+    min-width: 190px;
+    max-width: 290px;
+    display: none;
+    flex-direction: column;
+}
+
+.multiselect-dropdown.open .multiselect-menu {
+    display: flex;
+}
+
+.multiselect-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+    background: #f8fafc;
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+}
+
+.ms-header-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.ms-btn-action {
+    background: none;
+    border: none;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+
+.ms-btn-action:hover {
+    background: #e0e7ff;
+    text-decoration: underline;
+}
+
+.multiselect-options-list {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    font-size: 11.5px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-primary);
+    transition: background 0.1s;
+}
+
+.multiselect-option:hover {
+    background: #f1f5f9;
+}
+
+.multiselect-option input[type="checkbox"] {
+    accent-color: var(--primary);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.multiselect-option .ms-opt-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.modern-table th:last-child, .modern-table td:last-child { border-right: none; }
